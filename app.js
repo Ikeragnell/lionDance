@@ -43,6 +43,7 @@ const state = {
     playback: {
         playing: false,
         audioScheduledAt: 0,   // audioCtx.currentTime when audio fires
+        seekOffset: 0,         // seconds into the buffer where playback started
     },
 
     settings: {
@@ -78,18 +79,25 @@ async function loadAudioUrl(url, name) {
     state.audio.fileName = name;
     document.getElementById('audio-filename').textContent = name;
     document.getElementById('btn-play').disabled = false;
+    const dur = state.audio.buffer.duration;
+    const slider = document.getElementById('seek-slider');
+    slider.max   = dur;
+    slider.value = 0;
+    slider.disabled = false;
+    document.getElementById('seek-time').textContent = '0:00 / ' + formatTime(dur);
 }
 
-function startAudioAfter(delaySec) {
+function startAudioAfter(delaySec, offsetSec = 0) {
     killAudioSource();
     const src = state.audio.ctx.createBufferSource();
     src.buffer = state.audio.buffer;
     src.connect(state.audio.ctx.destination);
     const fireAt = state.audio.ctx.currentTime + delaySec;
     src.playbackRate.value = state.settings.speed;
-    src.start(fireAt);
+    src.start(fireAt, offsetSec);
     state.audio.source = src;
     state.playback.audioScheduledAt = fireAt;
+    state.playback.seekOffset = offsetSec;
     return fireAt;
 }
 
@@ -104,7 +112,13 @@ function getAudioTime() {
     if (!state.audio.ctx) return 0;
     const elapsed = state.audio.ctx.currentTime - state.playback.audioScheduledAt;
     const rate = state.audio.source?.playbackRate?.value ?? 1;
-    return elapsed * rate;
+    return state.playback.seekOffset + elapsed * rate;
+}
+
+function formatTime(secs) {
+    const s = Math.max(0, secs);
+    const m = Math.floor(s / 60);
+    return m + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 }
 
 // ─── Canvas ───────────────────────────────────────────────────
@@ -167,6 +181,17 @@ function renderFrame() {
     }
 
     if (state.playback.playing) drawCountdown(audioTime, w, h);
+
+    // sync seek slider
+    if (state.audio.buffer) {
+        const dur = state.audio.buffer.duration;
+        const t   = Math.min(Math.max(0, audioTime), dur);
+        const slider = document.getElementById('seek-slider');
+        if (document.activeElement !== slider) slider.value = t;
+        document.getElementById('seek-time').textContent = formatTime(t) + ' / ' + formatTime(dur);
+        // auto-stop at end
+        if (state.playback.playing && audioTime >= dur) stop();
+    }
 }
 
 function drawLane(x0, x1, hitY, validPx, pps, audioTime, timestamps, color, label) {
@@ -288,7 +313,8 @@ function play() {
     ensureAudioCtx();
     if (state.audio.ctx.state === 'suspended') state.audio.ctx.resume();
     state.playback.playing = true;
-    startAudioAfter(COUNTDOWN_SEC);
+    const offset = parseFloat(document.getElementById('seek-slider').value) || 0;
+    startAudioAfter(COUNTDOWN_SEC, offset);
     document.getElementById('btn-play').disabled = true;
     document.getElementById('btn-stop').disabled = false;
     startLoop();
@@ -497,6 +523,20 @@ function initEvents() {
     document.getElementById('btn-play').addEventListener('click', play);
     document.getElementById('btn-stop').addEventListener('click', stop);
 
+    // Seek slider
+    document.getElementById('seek-slider').addEventListener('input', e => {
+        const t = parseFloat(e.target.value);
+        if (state.playback.playing) {
+            // restart from new position without countdown
+            startAudioAfter(0, t);
+        }
+        if (state.audio.buffer) {
+            document.getElementById('seek-time').textContent =
+                formatTime(t) + ' / ' + formatTime(state.audio.buffer.duration);
+        }
+        renderFrame();
+    });
+
     // Speed slider
     const slider  = document.getElementById('speed-slider');
     const speedLbl = document.getElementById('speed-value');
@@ -555,6 +595,15 @@ function initEvents() {
     document.getElementById('btn-ts-clear').addEventListener('click', () => {
         if (!confirm(`Clear all ${state.editor.activeInst} timestamps?`)) return;
         setActivePattern([]);
+        refreshEditorUI();
+    });
+    document.getElementById('btn-ts-clear-all').addEventListener('click', () => {
+        if (!confirm('Clear ALL timestamps for every instrument?')) return;
+        state.pattern.cymbal = [];
+        state.pattern.drum1  = [];
+        state.pattern.drum2  = [];
+        state.pattern.drum3  = [];
+        state.pattern.drum4  = [];
         refreshEditorUI();
     });
 

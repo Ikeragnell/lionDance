@@ -146,6 +146,8 @@ input[type="range"] {
     accent-color: var(--accent);
     cursor: pointer;
 }
+.seek-group input[type="range"] { width: 220px; }
+.seek-group { flex: 1; min-width: 0; }
 select,
 input[type="number"],
 textarea {
