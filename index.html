@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Lion Dance Trainer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <span class="app-title">🦁 Lion Dance Trainer</span>
+            <span id="audio-filename" class="audio-filename">No audio loaded</span>
+        </div>
+        <div class="header-right">
+            <button id="btn-load-audio">Load Audio</button>
+            <button id="btn-open-editor">Edit Pattern</button>
+            <button id="btn-export">Export JSON</button>
+            <button id="btn-import">Import JSON</button>
+        </div>
+    </header>
+
+    <div id="canvas-container">
+        <canvas id="main-canvas"></canvas>
+    </div>
+
+    <footer>
+        <div class="controls">
+            <div class="playback-btns">
+                <button id="btn-play" disabled>▶ Play</button>
+                <button id="btn-stop" disabled>■ Stop</button>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Speed</span>
+                <input type="range" id="speed-slider" min="0.25" max="2" step="0.05" value="1">
+                <span id="speed-value">1.00×</span>
+            </div>
+            <div class="control-group">
+                <span class="control-label">Show</span>
+                <select id="instrument-select">
+                    <option value="both">Both</option>
+                    <option value="cymbal">Cymbal only</option>
+                    <option value="drum">Drum only</option>
+                </select>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ─── Pattern Editor Modal ─────────────────────────── -->
+    <div id="editor-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Pattern Editor</h2>
+                <button id="btn-close-editor" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+
+                <!-- Instrument selector -->
+                <div class="tabs" id="inst-tabs">
+                    <button class="tab inst-tab active" data-inst="cymbal">Cymbal</button>
+                    <button class="tab inst-tab" data-inst="drum">Drum</button>
+                </div>
+
+                <!-- Input mode selector -->
+                <div class="tabs" id="mode-tabs">
+                    <button class="tab mode-tab active" data-mode="bpm">BPM Grid</button>
+                    <button class="tab mode-tab" data-mode="timestamps">Timestamps</button>
+                    <button class="tab mode-tab" data-mode="tap">Live Tap</button>
+                </div>
+
+                <!-- BPM Grid Panel -->
+                <div id="panel-bpm" class="panel">
+                    <div class="bpm-params">
+                        <label>BPM<input type="number" id="bpm-input" value="120" min="20" max="400"></label>
+                        <label>Beats/bar<input type="number" id="beats-per-bar" value="4" min="1" max="16"></label>
+                        <label>Steps/beat<input type="number" id="steps-per-beat" value="4" min="1" max="8"></label>
+                        <label>Bars<input type="number" id="num-bars" value="4" min="1" max="128"></label>
+                        <label>Start (s)<input type="number" id="bpm-start" value="0" min="0" step="0.01"></label>
+                    </div>
+                    <div id="bpm-grid" class="bpm-grid"></div>
+                    <div class="btn-row">
+                        <button id="btn-bpm-clear-sel">Clear selection</button>
+                        <button id="btn-bpm-apply">Add to pattern</button>
+                        <button id="btn-bpm-replace">Replace pattern</button>
+                    </div>
+                </div>
+
+                <!-- Timestamps Panel -->
+                <div id="panel-timestamps" class="panel hidden">
+                    <p class="hint">Enter seconds, separated by commas or newlines.</p>
+                    <textarea id="ts-textarea" placeholder="0.500&#10;1.000&#10;1.500&#10;2.000"></textarea>
+                    <div class="btn-row">
+                        <button id="btn-ts-apply">Apply (replace)</button>
+                        <button id="btn-ts-merge">Merge with existing</button>
+                    </div>
+                </div>
+
+                <!-- Live Tap Panel -->
+                <div id="panel-tap" class="panel hidden">
+                    <p class="hint">
+                        Load audio first. During recording press
+                        <kbd>C</kbd> for Cymbal and <kbd>D</kbd> for Drum simultaneously.
+                    </p>
+                    <div class="tap-controls">
+                        <button id="btn-tap-start">▶ Start Recording</button>
+                        <button id="btn-tap-stop" disabled>■ Stop</button>
+                    </div>
+                    <p id="tap-status" class="hint"></p>
+                </div>
+
+                <!-- Fine-tune list (always visible) -->
+                <div class="finetune-section">
+                    <div class="finetune-header">
+                        <h3>Timestamps <span id="ts-count" class="ts-count"></span></h3>
+                        <div class="btn-row">
+                            <button id="btn-ts-add">+ Add</button>
+                            <button id="btn-ts-clear" class="danger">Clear all</button>
+                        </div>
+                    </div>
+                    <div id="finetune-list"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── Tap Recording Overlay (shown over canvas) ────── -->
+    <div id="tap-overlay" class="hidden">
+        <div class="tap-overlay-inner">
+            <div class="tap-overlay-title">TAP MODE</div>
+            <div class="tap-keys-row">
+                <div class="tap-key cymbal-key">
+                    <span class="key-badge">C</span>
+                    <span class="key-label">CYMBAL</span>
+                    <span class="key-count" id="ov-cymbal">0</span>
+                </div>
+                <div class="tap-key drum-key">
+                    <span class="key-badge">D</span>
+                    <span class="key-label">DRUM</span>
+                    <span class="key-count" id="ov-drum">0</span>
+                </div>
+            </div>
+            <button id="btn-tap-overlay-stop">■ Stop Recording</button>
+        </div>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="audio-file-input" accept="audio/*" style="display:none">
+    <input type="file" id="import-file-input" accept=".json" style="display:none">
+
+    <script src="app.js"></script>
+</body>
+</html>
