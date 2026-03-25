@@ -10,6 +10,10 @@
     --cymbal-dim: rgba(245,166,35,0.25);
     --drum:       #e84040;
     --drum-dim:   rgba(232,64,64,0.25);
+    --drum1:      #e84040;  --drum1-dim: rgba(232,64,64,0.25);
+    --drum2:      #e88040;  --drum2-dim: rgba(232,128,64,0.25);
+    --drum3:      #40c8e8;  --drum3-dim: rgba(64,200,232,0.25);
+    --drum4:      #a040e8;  --drum4-dim: rgba(160,64,232,0.25);
     --accent:     #4fc3f7;
     --hit-zone:   rgba(255,255,255,0.35);
     --valid-band: rgba(255,255,255,0.06);
@@ -220,11 +224,10 @@ textarea {
     border-color: var(--cymbal);
     color: var(--cymbal);
 }
-.inst-tab.active[data-inst="drum"] {
-    background: var(--drum-dim);
-    border-color: var(--drum);
-    color: var(--drum);
-}
+.inst-tab.active[data-inst="drum1"] { background: var(--drum1-dim); border-color: var(--drum1); color: var(--drum1); }
+.inst-tab.active[data-inst="drum2"] { background: var(--drum2-dim); border-color: var(--drum2); color: var(--drum2); }
+.inst-tab.active[data-inst="drum3"] { background: var(--drum3-dim); border-color: var(--drum3); color: var(--drum3); }
+.inst-tab.active[data-inst="drum4"] { background: var(--drum4-dim); border-color: var(--drum4); color: var(--drum4); }
 
 /* Mode tab active state */
 .mode-tab.active {
@@ -302,7 +305,16 @@ kbd {
 .grid-step.bar-start   { border-left-color: rgba(255,255,255,0.65); border-left-width: 2px; }
 
 /* ─── Live Tap ───────────────────────────────────────────── */
-.tap-controls { display: flex; gap: 8px; }
+.tap-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tap-delay-label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    margin-left: 8px;
+}
+.tap-delay-label input[type="number"] { width: 58px; }
 
 /* ─── Fine-tune section ──────────────────────────────────── */
 .finetune-section {
@@ -394,7 +406,9 @@ kbd {
 
 .tap-keys-row {
     display: flex;
-    gap: 32px;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .tap-key {
@@ -402,16 +416,22 @@ kbd {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    padding: 20px 28px;
+    padding: 16px 20px;
     border-radius: var(--radius);
     border: 2px solid var(--border);
-    min-width: 120px;
+    min-width: 90px;
     transition: border-color 0.1s, background 0.1s;
 }
 .tap-key.cymbal-key { border-color: var(--cymbal-dim); }
-.tap-key.drum-key   { border-color: var(--drum-dim); }
+.tap-key.drum1-key  { border-color: var(--drum1-dim); }
+.tap-key.drum2-key  { border-color: var(--drum2-dim); }
+.tap-key.drum3-key  { border-color: var(--drum3-dim); }
+.tap-key.drum4-key  { border-color: var(--drum4-dim); }
 .tap-key.flash-cymbal { background: var(--cymbal-dim); border-color: var(--cymbal); }
-.tap-key.flash-drum   { background: var(--drum-dim);   border-color: var(--drum); }
+.tap-key.flash-drum1  { background: var(--drum1-dim);  border-color: var(--drum1); }
+.tap-key.flash-drum2  { background: var(--drum2-dim);  border-color: var(--drum2); }
+.tap-key.flash-drum3  { background: var(--drum3-dim);  border-color: var(--drum3); }
+.tap-key.flash-drum4  { background: var(--drum4-dim);  border-color: var(--drum4); }
 
 .key-badge {
     font-size: 1.6rem;
@@ -419,7 +439,10 @@ kbd {
     font-family: monospace;
 }
 .cymbal-key .key-badge { color: var(--cymbal); }
-.drum-key   .key-badge { color: var(--drum); }
+.drum1-key  .key-badge { color: var(--drum1); }
+.drum2-key  .key-badge { color: var(--drum2); }
+.drum3-key  .key-badge { color: var(--drum3); }
+.drum4-key  .key-badge { color: var(--drum4); }
 
 .key-label {
     font-size: 0.75rem;

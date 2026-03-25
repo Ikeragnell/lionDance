@@ -17,11 +17,21 @@ const C_HITZONE = 'rgba(255,255,255,0.30)';
 const C_VALID   = 'rgba(255,255,255,0.06)';
 const C_LABEL   = 'rgba(255,255,255,0.40)';
 const C_CYMBAL  = '#f5a623';
-const C_DRUM    = '#e84040';
+const C_DRUM1   = '#e84040';
+const C_DRUM2   = '#e88040';
+const C_DRUM3   = '#40c8e8';
+const C_DRUM4   = '#a040e8';
+
+const DRUM_DEFS = [
+    { key: 'drum1', color: C_DRUM1, label: 'S' },
+    { key: 'drum2', color: C_DRUM2, label: 'D' },
+    { key: 'drum3', color: C_DRUM3, label: 'K' },
+    { key: 'drum4', color: C_DRUM4, label: 'L' },
+];
 
 // ─── State ────────────────────────────────────────────────────
 const state = {
-    pattern: { cymbal: [], drum: [] },
+    pattern: { cymbal: [], drum1: [], drum2: [], drum3: [], drum4: [] },
 
     audio: {
         ctx: null,
@@ -42,20 +52,12 @@ const state = {
 
     editor: {
         activeInst: 'cymbal',
-        activeMode: 'bpm',
-        // BPM grid
-        bpm: 120,
-        beatsPerBar: 4,
-        stepsPerBeat: 4,
-        numBars: 4,
-        bpmStart: 0,
-        selectedSteps: new Set(),
     },
 
     tap: {
         active: false,
         cymbalTaps: [],
-        drumTaps: [],
+        drum1Taps: [], drum2Taps: [], drum3Taps: [], drum4Taps: [],
         audioCtxStartTime: 0,
     },
 
@@ -69,12 +71,12 @@ function ensureAudioCtx() {
     }
 }
 
-async function loadAudioFile(file) {
+async function loadAudioUrl(url, name) {
     ensureAudioCtx();
-    const ab = await file.arrayBuffer();
+    const ab = await (await fetch(url)).arrayBuffer();
     state.audio.buffer = await state.audio.ctx.decodeAudioData(ab);
-    state.audio.fileName = file.name;
-    document.getElementById('audio-filename').textContent = file.name;
+    state.audio.fileName = name;
+    document.getElementById('audio-filename').textContent = name;
     document.getElementById('btn-play').disabled = false;
 }
 
@@ -140,17 +142,28 @@ function renderFrame() {
     ctx.fillRect(0, 0, w, h);
 
     if (inst === 'both') {
-        const mid = w / 2;
-        // divider
-        ctx.strokeStyle = C_DIVIDER;
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(mid, 0); ctx.lineTo(mid, h); ctx.stroke();
-        drawLane(0,   mid, hitY, validPx, pps, audioTime, state.pattern.cymbal, C_CYMBAL, 'CYMBAL');
-        drawLane(mid, w,   hitY, validPx, pps, audioTime, state.pattern.drum,   C_DRUM,   'DRUM');
+        const laneW = w / 5;
+        drawLane(0, laneW, hitY, validPx, pps, audioTime, state.pattern.cymbal, C_CYMBAL, 'CYMBAL');
+        DRUM_DEFS.forEach((d, i) => {
+            const x0 = (i + 1) * laneW;
+            ctx.strokeStyle = C_DIVIDER;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, h); ctx.stroke();
+            drawLane(x0, x0 + laneW, hitY, validPx, pps, audioTime, state.pattern[d.key], d.color, d.label);
+        });
     } else if (inst === 'cymbal') {
         drawLane(0, w, hitY, validPx, pps, audioTime, state.pattern.cymbal, C_CYMBAL, 'CYMBAL');
     } else {
-        drawLane(0, w, hitY, validPx, pps, audioTime, state.pattern.drum, C_DRUM, 'DRUM');
+        const laneW = w / 4;
+        DRUM_DEFS.forEach((d, i) => {
+            const x0 = i * laneW;
+            if (i > 0) {
+                ctx.strokeStyle = C_DIVIDER;
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(x0, 0); ctx.lineTo(x0, h); ctx.stroke();
+            }
+            drawLane(x0, x0 + laneW, hitY, validPx, pps, audioTime, state.pattern[d.key], d.color, d.label);
+        });
     }
 
     if (state.playback.playing) drawCountdown(audioTime, w, h);
@@ -295,21 +308,6 @@ function sortedUnique(arr) {
     return [...new Set(arr.map(n => Math.round(n * 1000) / 1000))].sort((a, b) => a - b);
 }
 
-function parseTimestampText(text) {
-    return sortedUnique(
-        text.split(/[\s,;]+/)
-            .map(s => parseFloat(s.trim()))
-            .filter(n => !isNaN(n) && n >= 0)
-    );
-}
-
-function bpmGridToTimestamps() {
-    const { bpm, beatsPerBar, stepsPerBeat, numBars, bpmStart, selectedSteps } = state.editor;
-    const stepDur = 60 / bpm / stepsPerBeat;
-    const result  = [];
-    selectedSteps.forEach(i => result.push(bpmStart + i * stepDur));
-    return result;
-}
 
 function getActivePattern() { return state.pattern[state.editor.activeInst]; }
 function setActivePattern(arr) {
@@ -333,37 +331,16 @@ function importPattern(file) {
         try {
             const data = JSON.parse(e.target.result);
             if (data.cymbal) state.pattern.cymbal = sortedUnique(data.cymbal);
-            if (data.drum)   state.pattern.drum   = sortedUnique(data.drum);
+            if (data.drum1)  state.pattern.drum1  = sortedUnique(data.drum1);
+            if (data.drum2)  state.pattern.drum2  = sortedUnique(data.drum2);
+            if (data.drum3)  state.pattern.drum3  = sortedUnique(data.drum3);
+            if (data.drum4)  state.pattern.drum4  = sortedUnique(data.drum4);
             refreshEditorUI();
         } catch (_) {
             alert('Invalid JSON file.');
         }
     };
     reader.readAsText(file);
-}
-
-// ─── BPM Grid UI ─────────────────────────────────────────────
-function rebuildBpmGrid() {
-    const { beatsPerBar, stepsPerBeat, numBars, selectedSteps } = state.editor;
-    const stepsPerBar  = beatsPerBar * stepsPerBeat;
-    const totalSteps   = stepsPerBar * numBars;
-    const grid         = document.getElementById('bpm-grid');
-
-    grid.innerHTML = '';
-    grid.style.gridTemplateColumns = `repeat(${stepsPerBar}, 1fr)`;
-
-    for (let i = 0; i < totalSteps; i++) {
-        const btn = document.createElement('button');
-        btn.className = 'grid-step';
-        if (i % stepsPerBeat === 0) btn.classList.add('beat-start');
-        if (i % stepsPerBar  === 0) btn.classList.add('bar-start');
-        if (selectedSteps.has(i))   btn.classList.add('active');
-        btn.addEventListener('click', () => {
-            selectedSteps.has(i) ? selectedSteps.delete(i) : selectedSteps.add(i);
-            btn.classList.toggle('active');
-        });
-        grid.appendChild(btn);
-    }
 }
 
 // ─── Fine-tune list UI ────────────────────────────────────────
@@ -429,14 +406,8 @@ function nudge(i, delta) {
     refreshFineTuneList();
 }
 
-function syncTextarea() {
-    document.getElementById('ts-textarea').value =
-        getActivePattern().map(t => t.toFixed(3)).join('\n');
-}
-
 function refreshEditorUI() {
     refreshFineTuneList();
-    syncTextarea();
 }
 
 // ─── Tap recording ────────────────────────────────────────────
@@ -447,10 +418,13 @@ function startTapRecording() {
 
     state.tap.active       = true;
     state.tap.cymbalTaps   = [];
-    state.tap.drumTaps     = [];
+    state.tap.drum1Taps    = [];
+    state.tap.drum2Taps    = [];
+    state.tap.drum3Taps    = [];
+    state.tap.drum4Taps    = [];
 
-    // start audio immediately (no countdown in tap mode — listen live)
-    startAudioAfter(0);
+    const delay = Math.max(0, parseFloat(document.getElementById('tap-delay').value) || 0);
+    startAudioAfter(delay);
     state.tap.audioCtxStartTime = state.playback.audioScheduledAt;
 
     // show canvas tiles while tapping (use playback loop)
@@ -459,7 +433,10 @@ function startTapRecording() {
 
     // show tap overlay
     document.getElementById('ov-cymbal').textContent = '0';
-    document.getElementById('ov-drum').textContent   = '0';
+    document.getElementById('ov-drum1').textContent  = '0';
+    document.getElementById('ov-drum2').textContent  = '0';
+    document.getElementById('ov-drum3').textContent  = '0';
+    document.getElementById('ov-drum4').textContent  = '0';
     document.getElementById('tap-overlay').classList.remove('hidden');
 
     document.getElementById('tap-status').textContent = 'Recording…';
@@ -475,14 +452,14 @@ function stopTapRecording() {
     document.getElementById('tap-overlay').classList.add('hidden');
 
     // merge taps into pattern
-    const cymbal = sortedUnique([...state.pattern.cymbal, ...state.tap.cymbalTaps]);
-    const drum   = sortedUnique([...state.pattern.drum,   ...state.tap.drumTaps]);
-    state.pattern.cymbal = cymbal;
-    state.pattern.drum   = drum;
+    state.pattern.cymbal = sortedUnique([...state.pattern.cymbal, ...state.tap.cymbalTaps]);
+    state.pattern.drum1  = sortedUnique([...state.pattern.drum1,  ...state.tap.drum1Taps]);
+    state.pattern.drum2  = sortedUnique([...state.pattern.drum2,  ...state.tap.drum2Taps]);
+    state.pattern.drum3  = sortedUnique([...state.pattern.drum3,  ...state.tap.drum3Taps]);
+    state.pattern.drum4  = sortedUnique([...state.pattern.drum4,  ...state.tap.drum4Taps]);
 
-    const total = state.tap.cymbalTaps.length + state.tap.drumTaps.length;
     document.getElementById('tap-status').textContent =
-        `Done — recorded ${state.tap.cymbalTaps.length} cymbal, ${state.tap.drumTaps.length} drum taps.`;
+        `Done — cymbal: ${state.tap.cymbalTaps.length}, drums: ${state.tap.drum1Taps.length}/${state.tap.drum2Taps.length}/${state.tap.drum3Taps.length}/${state.tap.drum4Taps.length} taps.`;
 
     refreshEditorUI();
 
@@ -495,15 +472,10 @@ function recordTap(inst) {
     const t = getAudioTime();
     if (t < 0) return;
 
-    if (inst === 'cymbal') {
-        state.tap.cymbalTaps.push(t);
-        document.getElementById('ov-cymbal').textContent = state.tap.cymbalTaps.length;
-        flashTapKey('cymbal');
-    } else {
-        state.tap.drumTaps.push(t);
-        document.getElementById('ov-drum').textContent = state.tap.drumTaps.length;
-        flashTapKey('drum');
-    }
+    const tapsKey = inst === 'cymbal' ? 'cymbalTaps' : inst + 'Taps';
+    state.tap[tapsKey].push(t);
+    document.getElementById('ov-' + inst).textContent = state.tap[tapsKey].length;
+    flashTapKey(inst);
 }
 
 function flashTapKey(inst) {
@@ -516,11 +488,9 @@ function flashTapKey(inst) {
 // ─── Event listeners ──────────────────────────────────────────
 function initEvents() {
     // Audio load
-    document.getElementById('btn-load-audio').addEventListener('click', () =>
-        document.getElementById('audio-file-input').click());
-    document.getElementById('audio-file-input').addEventListener('change', e => {
-        if (e.target.files[0]) loadAudioFile(e.target.files[0]);
-        e.target.value = '';
+    document.getElementById('audio-select').addEventListener('change', e => {
+        const val = e.target.value;
+        if (val) loadAudioUrl(val, e.target.options[e.target.selectedIndex].text);
     });
 
     // Playback
@@ -568,57 +538,6 @@ function initEvents() {
         });
     });
 
-    // Mode tabs
-    document.querySelectorAll('.mode-tab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
-            document.getElementById('panel-' + btn.dataset.mode).classList.remove('hidden');
-            state.editor.activeMode = btn.dataset.mode;
-        });
-    });
-
-    // BPM param changes → rebuild grid
-    ['bpm-input','beats-per-bar','steps-per-beat','num-bars','bpm-start'].forEach(id => {
-        document.getElementById(id).addEventListener('change', () => {
-            state.editor.bpm          = parseFloat(document.getElementById('bpm-input').value)     || 120;
-            state.editor.beatsPerBar  = parseInt(document.getElementById('beats-per-bar').value)   || 4;
-            state.editor.stepsPerBeat = parseInt(document.getElementById('steps-per-beat').value)  || 4;
-            state.editor.numBars      = parseInt(document.getElementById('num-bars').value)        || 4;
-            state.editor.bpmStart     = parseFloat(document.getElementById('bpm-start').value)     || 0;
-            state.editor.selectedSteps.clear();
-            rebuildBpmGrid();
-        });
-    });
-
-    document.getElementById('btn-bpm-clear-sel').addEventListener('click', () => {
-        state.editor.selectedSteps.clear();
-        rebuildBpmGrid();
-    });
-
-    document.getElementById('btn-bpm-apply').addEventListener('click', () => {
-        const newTs = bpmGridToTimestamps();
-        setActivePattern([...getActivePattern(), ...newTs]);
-        refreshEditorUI();
-    });
-
-    document.getElementById('btn-bpm-replace').addEventListener('click', () => {
-        setActivePattern(bpmGridToTimestamps());
-        refreshEditorUI();
-    });
-
-    // Timestamps panel
-    document.getElementById('btn-ts-apply').addEventListener('click', () => {
-        setActivePattern(parseTimestampText(document.getElementById('ts-textarea').value));
-        refreshFineTuneList();
-    });
-    document.getElementById('btn-ts-merge').addEventListener('click', () => {
-        const parsed = parseTimestampText(document.getElementById('ts-textarea').value);
-        setActivePattern([...getActivePattern(), ...parsed]);
-        refreshFineTuneList();
-    });
-
     // Tap panel
     document.getElementById('btn-tap-start').addEventListener('click', () => {
         closeEditor();
@@ -643,7 +562,10 @@ function initEvents() {
     document.addEventListener('keydown', e => {
         if (state.tap.active) {
             if (e.code === 'KeyC') { e.preventDefault(); recordTap('cymbal'); }
-            if (e.code === 'KeyD') { e.preventDefault(); recordTap('drum'); }
+            if (e.code === 'KeyS') { e.preventDefault(); recordTap('drum1'); }
+            if (e.code === 'KeyD') { e.preventDefault(); recordTap('drum2'); }
+            if (e.code === 'KeyK') { e.preventDefault(); recordTap('drum3'); }
+            if (e.code === 'KeyL') { e.preventDefault(); recordTap('drum4'); }
             if (e.code === 'Escape') stopTapRecording();
         }
     });
@@ -665,7 +587,6 @@ function closeEditor() {
 function init() {
     resizeCanvas();
     initEvents();
-    rebuildBpmGrid();
     renderFrame();
     document.getElementById('btn-stop').disabled = true;
 }

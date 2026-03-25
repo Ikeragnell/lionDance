@@ -14,7 +14,11 @@
             <span id="audio-filename" class="audio-filename">No audio loaded</span>
         </div>
         <div class="header-right">
-            <button id="btn-load-audio">Load Audio</button>
+            <select id="audio-select">
+                <option value="">— Select track —</option>
+                <option value="intro.mp3">Intro</option>
+                <option value="salade.mp3">Salade</option>
+            </select>
             <button id="btn-open-editor">Edit Pattern</button>
             <button id="btn-export">Export JSON</button>
             <button id="btn-import">Import JSON</button>
@@ -59,52 +63,24 @@
                 <!-- Instrument selector -->
                 <div class="tabs" id="inst-tabs">
                     <button class="tab inst-tab active" data-inst="cymbal">Cymbal</button>
-                    <button class="tab inst-tab" data-inst="drum">Drum</button>
-                </div>
-
-                <!-- Input mode selector -->
-                <div class="tabs" id="mode-tabs">
-                    <button class="tab mode-tab active" data-mode="bpm">BPM Grid</button>
-                    <button class="tab mode-tab" data-mode="timestamps">Timestamps</button>
-                    <button class="tab mode-tab" data-mode="tap">Live Tap</button>
-                </div>
-
-                <!-- BPM Grid Panel -->
-                <div id="panel-bpm" class="panel">
-                    <div class="bpm-params">
-                        <label>BPM<input type="number" id="bpm-input" value="120" min="20" max="400"></label>
-                        <label>Beats/bar<input type="number" id="beats-per-bar" value="4" min="1" max="16"></label>
-                        <label>Steps/beat<input type="number" id="steps-per-beat" value="4" min="1" max="8"></label>
-                        <label>Bars<input type="number" id="num-bars" value="4" min="1" max="128"></label>
-                        <label>Start (s)<input type="number" id="bpm-start" value="0" min="0" step="0.01"></label>
-                    </div>
-                    <div id="bpm-grid" class="bpm-grid"></div>
-                    <div class="btn-row">
-                        <button id="btn-bpm-clear-sel">Clear selection</button>
-                        <button id="btn-bpm-apply">Add to pattern</button>
-                        <button id="btn-bpm-replace">Replace pattern</button>
-                    </div>
-                </div>
-
-                <!-- Timestamps Panel -->
-                <div id="panel-timestamps" class="panel hidden">
-                    <p class="hint">Enter seconds, separated by commas or newlines.</p>
-                    <textarea id="ts-textarea" placeholder="0.500&#10;1.000&#10;1.500&#10;2.000"></textarea>
-                    <div class="btn-row">
-                        <button id="btn-ts-apply">Apply (replace)</button>
-                        <button id="btn-ts-merge">Merge with existing</button>
-                    </div>
+                    <button class="tab inst-tab" data-inst="drum1">Drum 1</button>
+                    <button class="tab inst-tab" data-inst="drum2">Drum 2</button>
+                    <button class="tab inst-tab" data-inst="drum3">Drum 3</button>
+                    <button class="tab inst-tab" data-inst="drum4">Drum 4</button>
                 </div>
 
                 <!-- Live Tap Panel -->
-                <div id="panel-tap" class="panel hidden">
+                <div id="panel-tap" class="panel">
                     <p class="hint">
                         Load audio first. During recording press
-                        <kbd>C</kbd> for Cymbal and <kbd>D</kbd> for Drum simultaneously.
+                        <kbd>C</kbd> for Cymbal and <kbd>S</kbd> <kbd>D</kbd> <kbd>K</kbd> <kbd>L</kbd> for Drums 1–4.
                     </p>
                     <div class="tap-controls">
                         <button id="btn-tap-start">▶ Start Recording</button>
                         <button id="btn-tap-stop" disabled>■ Stop</button>
+                        <label class="tap-delay-label">Delay (s)
+                            <input type="number" id="tap-delay" value="3" min="0" max="30" step="1">
+                        </label>
                     </div>
                     <p id="tap-status" class="hint"></p>
                 </div>
@@ -135,10 +111,25 @@
                     <span class="key-label">CYMBAL</span>
                     <span class="key-count" id="ov-cymbal">0</span>
                 </div>
-                <div class="tap-key drum-key">
+                <div class="tap-key drum1-key">
+                    <span class="key-badge">S</span>
+                    <span class="key-label">DRUM 1</span>
+                    <span class="key-count" id="ov-drum1">0</span>
+                </div>
+                <div class="tap-key drum2-key">
                     <span class="key-badge">D</span>
-                    <span class="key-label">DRUM</span>
-                    <span class="key-count" id="ov-drum">0</span>
+                    <span class="key-label">DRUM 2</span>
+                    <span class="key-count" id="ov-drum2">0</span>
+                </div>
+                <div class="tap-key drum3-key">
+                    <span class="key-badge">K</span>
+                    <span class="key-label">DRUM 3</span>
+                    <span class="key-count" id="ov-drum3">0</span>
+                </div>
+                <div class="tap-key drum4-key">
+                    <span class="key-badge">L</span>
+                    <span class="key-label">DRUM 4</span>
+                    <span class="key-count" id="ov-drum4">0</span>
                 </div>
             </div>
             <button id="btn-tap-overlay-stop">■ Stop Recording</button>
@@ -146,7 +137,6 @@
     </div>
 
     <!-- Hidden file inputs -->
-    <input type="file" id="audio-file-input" accept="audio/*" style="display:none">
     <input type="file" id="import-file-input" accept=".json" style="display:none">
 
     <script src="app.js"></script>
