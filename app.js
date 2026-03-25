@@ -351,6 +351,18 @@ function exportPattern() {
     URL.revokeObjectURL(a.href);
 }
 
+async function importPatternUrl(url) {
+    try {
+        const data = await (await fetch(url)).json();
+        if (data.cymbal) state.pattern.cymbal = sortedUnique(data.cymbal);
+        if (data.drum1)  state.pattern.drum1  = sortedUnique(data.drum1);
+        if (data.drum2)  state.pattern.drum2  = sortedUnique(data.drum2);
+        if (data.drum3)  state.pattern.drum3  = sortedUnique(data.drum3);
+        if (data.drum4)  state.pattern.drum4  = sortedUnique(data.drum4);
+        refreshEditorUI();
+    } catch (_) {}
+}
+
 function importPattern(file) {
     const reader = new FileReader();
     reader.onload = e => {
@@ -516,7 +528,10 @@ function initEvents() {
     // Audio load
     document.getElementById('audio-select').addEventListener('change', e => {
         const val = e.target.value;
-        if (val) loadAudioUrl(val, e.target.options[e.target.selectedIndex].text);
+        if (val) {
+            loadAudioUrl(val, e.target.options[e.target.selectedIndex].text);
+            importPatternUrl(val.replace('.mp3', '.json'));
+        }
     });
 
     // Playback
